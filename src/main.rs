@@ -1,4 +1,5 @@
 use anyhow::Result;
+use clap::{CommandFactory, Parser, error::ErrorKind};
 use futures_util::stream::TryStreamExt;
 use log::{info, warn};
 use rand::seq::SliceRandom;
@@ -9,18 +10,43 @@ use rspotify::{
 };
 use std::collections::HashSet;
 
-// ⚙️ Configuration
-const SOURCE_PLAYLISTS: &[&str] = &[
-    "3FRqF28glFVef3PqU4Fhoi",
-    "7HPMJjw9ncQGgRUqt48pOb", 
-    "4Qj9TfkDUlanrZNK6JmaJV",
-];
+/// Spotify Reshuffle CLI tool
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Comma-separated playlist IDs to use as sources
+    #[arg(short, long, value_delimiter = ',', default_values = &[] as &[&str])]
+    source_playlists: Vec<String>,
 
-const INCLUDE_LIKED: bool = true; // Enable/disable inclusion of Liked Songs
-const PLAYLIST_NAME: &str = "🎲 Reshuffled Playlist 2"; // Name for the new shuffled playlist
+    /// Name of the target playlist to create/update
+    #[arg(short, long)]
+    target_playlist_name: String,
+
+    /// Include liked songs in the shuffle
+    #[arg(long)]
+    include_liked: bool,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = Args::parse();
+    
+    // Validate that at least one source is provided
+    if args.source_playlists.is_empty() && !args.include_liked {
+        Args::command().error(
+            ErrorKind::MissingRequiredArgument,
+            "You must provide at least one --source-playlists, or use --include-liked"
+        ).exit();
+    }
+
+    // Validate the target playlist is non-empty
+    if args.target_playlist_name.trim().is_empty() {
+        Args::command().error(
+            ErrorKind::InvalidValue,
+            "Playlist name cannot be empty"
+        ).exit();
+    }
+
     // Initialize logger with custom format (no timestamp/prefix) and levels
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
@@ -36,7 +62,7 @@ async fn main() -> Result<()> {
     let spotify = init_spotify_client().await?;
     
     // Run the reshuffle process
-    reshuffle_and_create_playlist(&spotify).await?;
+    reshuffle_and_create_playlist(&spotify, &args).await?;
     
     Ok(())
 }
@@ -71,11 +97,11 @@ fn is_valid_spotify_track_uri(uri: &str) -> bool {
 }
 
 /// Find an existing playlist by search API or create a new one
-async fn find_or_create_playlist(spotify: &AuthCodeSpotify) -> Result<FullPlaylist> {
+async fn find_or_create_playlist(spotify: &AuthCodeSpotify, playlist_name: &str) -> Result<FullPlaylist> {
     // Use Search API to find playlist by name
     let search_result = spotify
         .search(
-            PLAYLIST_NAME,
+            playlist_name,
             SearchType::Playlist,
             None, // market
             None, // include_external
@@ -86,7 +112,7 @@ async fn find_or_create_playlist(spotify: &AuthCodeSpotify) -> Result<FullPlayli
     
     if let SearchResult::Playlists(playlists_page) = search_result {
         for playlist in playlists_page.items {
-            if playlist.name == PLAYLIST_NAME {
+            if playlist.name == playlist_name {
                 // Get current user to check ownership
                 let current_user = spotify.current_user().await?;
                 if playlist.owner.id == current_user.id {
@@ -106,7 +132,7 @@ async fn find_or_create_playlist(spotify: &AuthCodeSpotify) -> Result<FullPlayli
     let new_playlist = spotify
         .user_playlist_create(
             user.id,
-            PLAYLIST_NAME,
+            playlist_name,
             Some(false), // private
             None,        // collaborative
             Some("Automatically generated shuffled playlist"),
@@ -227,18 +253,19 @@ async fn get_liked_tracks(spotify: &AuthCodeSpotify) -> Result<Vec<String>> {
 }
 
 /// Merges, deduplicates, shuffles and creates a new playlist
-async fn reshuffle_and_create_playlist(spotify: &AuthCodeSpotify) -> Result<()> {
+async fn reshuffle_and_create_playlist(spotify: &AuthCodeSpotify, args: &Args) -> Result<()> {
     let mut all_tracks = Vec::new();
 
     // Regular playlists
-    if !SOURCE_PLAYLISTS.is_empty() {
-        info!("📂 Retrieving tracks from {} playlists...", SOURCE_PLAYLISTS.len());
-        let playlist_tracks = get_tracks_from_playlists(spotify, SOURCE_PLAYLISTS).await?;
+    if !args.source_playlists.is_empty() {
+        info!("📂 Retrieving tracks from {} playlists...", args.source_playlists.len());
+        let source_playlist_refs: Vec<&str> = args.source_playlists.iter().map(|s| s.as_str()).collect();
+        let playlist_tracks = get_tracks_from_playlists(spotify, &source_playlist_refs).await?;
         all_tracks.extend(playlist_tracks);
     }
 
     // Liked Songs
-    if INCLUDE_LIKED {
+    if args.include_liked {
         info!("❤️ Retrieving Liked Songs...");
         let liked_tracks = get_liked_tracks(spotify).await?;
         all_tracks.extend(liked_tracks);
@@ -273,7 +300,7 @@ async fn reshuffle_and_create_playlist(spotify: &AuthCodeSpotify) -> Result<()> 
     info!("🎲 Tracks shuffled: {} tracks ready", tracks_to_add.len());
 
     // Find or create reshuffle playlist
-    let playlist = find_or_create_playlist(spotify).await?;
+    let playlist = find_or_create_playlist(spotify, &args.target_playlist_name).await?;
 
     // Adding in batches of 100
     info!("⬆️ Adding tracks to playlist...");
