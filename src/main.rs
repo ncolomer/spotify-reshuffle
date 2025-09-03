@@ -172,7 +172,9 @@ async fn clear_playlist(spotify: &AuthCodeSpotify, playlist_id: &PlaylistId<'_>)
     
     // Remove tracks in batches (Spotify API has limits)
     const REMOVE_BATCH_SIZE: usize = 100;
-    for batch in track_ids.chunks(REMOVE_BATCH_SIZE) {
+    for (batch_num, batch) in track_ids.chunks(REMOVE_BATCH_SIZE).enumerate() {
+        info!("   Clearing batch {}: {} tracks", batch_num + 1, batch.len());
+
         spotify.playlist_remove_all_occurrences_of_items(
             playlist_id.clone(),
             batch.iter().cloned(),
@@ -191,8 +193,12 @@ async fn get_tracks_from_playlists(
     let mut tracks = Vec::new();
     let mut invalid_count = 0;
 
-    for &playlist_id in playlist_ids {
+    for (playlist_num, &playlist_id) in playlist_ids.iter().enumerate() {
         let playlist_id = PlaylistId::from_id(playlist_id)?;
+
+        // Get playlist info for logging
+        let playlist_info = spotify.playlist(playlist_id.clone(), None, None).await?;
+        info!("   Processing playlist {}: '{}'", playlist_num + 1, playlist_info.name);
 
         // Collect all items from the stream
         let items: Vec<_> = spotify
