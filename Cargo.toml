@@ -13,6 +13,3 @@ log = "0.4"
 futures-util = "0.3"
 clap = { version = "4.0", features = ["derive"] }
 
-[[bin]]
-name = "reshuffle"
-path = "src/main.rs"

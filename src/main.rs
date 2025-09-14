@@ -8,6 +8,7 @@ use rspotify::{
     prelude::*,
     scopes, AuthCodeSpotify, Config, Credentials, OAuth,
 };
+use spotify_reshuffle::tracks::{filter_valid_track_uris, is_valid_spotify_track_uri};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -99,13 +100,6 @@ async fn init_spotify_client(cache_path: Option<&str>) -> Result<AuthCodeSpotify
     spotify.prompt_for_token(&url).await?;
 
     Ok(spotify)
-}
-
-/// Checks if the URI is a valid Spotify track URI
-fn is_valid_spotify_track_uri(uri: &str) -> bool {
-    // Expected format: spotify:track:TRACK_ID
-    let parts: Vec<&str> = uri.split(':').collect();
-    parts.len() == 3 && parts[0] == "spotify" && parts[1] == "track" && !parts[2].is_empty()
 }
 
 /// Find an existing playlist by search API or create a new one
@@ -284,21 +278,20 @@ async fn reshuffle_and_create_playlist(spotify: &AuthCodeSpotify, args: &Args) -
         all_tracks.extend(liked_tracks);
     }
 
-    info!("🎵 Total tracks retrieved: {}", all_tracks.len());
+    let total_tracks = all_tracks.len();
+    info!("🎵 Total tracks retrieved: {}", total_tracks);
 
     // 🔄 Deduplication
     let unique_tracks: Vec<String> = all_tracks.into_iter().collect::<HashSet<_>>().into_iter().collect();
-    info!("🧹 After deduplication: {} unique tracks", unique_tracks.len());
+    let after_dedup = unique_tracks.len();
+    info!("🧹 After deduplication: {} unique tracks", after_dedup);
 
-    // Final validation - filter invalid URIs that might have passed through
-    let valid_tracks: Vec<String> = unique_tracks
-        .iter()
-        .filter(|uri| is_valid_spotify_track_uri(uri))
-        .cloned()
-        .collect();
+    // Final validation using library function
+    let valid_tracks = filter_valid_track_uris(&unique_tracks);
+    let after_validation = valid_tracks.len();
 
-    if valid_tracks.len() != unique_tracks.len() {
-        let removed = unique_tracks.len() - valid_tracks.len();
+    if after_validation != after_dedup {
+        let removed = after_dedup - after_validation;
         warn!("⚠️ {removed} invalid URIs removed during final validation");
     }
 
