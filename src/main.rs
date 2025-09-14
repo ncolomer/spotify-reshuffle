@@ -1,10 +1,10 @@
 use anyhow::Result;
-use clap::{CommandFactory, Parser, error::ErrorKind};
+use clap::{error::ErrorKind, CommandFactory, Parser};
 use futures_util::stream::TryStreamExt;
 use log::{info, warn};
 use rand::seq::SliceRandom;
 use rspotify::{
-    model::{Country, Market, PlayableId, PlayableItem, PlaylistId, TrackId, FullPlaylist, SearchType, SearchResult},
+    model::{Country, FullPlaylist, Market, PlayableId, PlayableItem, PlaylistId, SearchResult, SearchType, TrackId},
     prelude::*,
     scopes, AuthCodeSpotify, Config, Credentials, OAuth,
 };
@@ -30,21 +30,22 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    
+
     // Validate that at least one source is provided
     if args.source_playlists.is_empty() && !args.include_liked {
-        Args::command().error(
-            ErrorKind::MissingRequiredArgument,
-            "You must provide at least one --source-playlists, or use --include-liked"
-        ).exit();
+        Args::command()
+            .error(
+                ErrorKind::MissingRequiredArgument,
+                "You must provide at least one --source-playlists, or use --include-liked",
+            )
+            .exit();
     }
 
     // Validate the target playlist is non-empty
     if args.target_playlist_name.trim().is_empty() {
-        Args::command().error(
-            ErrorKind::InvalidValue,
-            "Playlist name cannot be empty"
-        ).exit();
+        Args::command()
+            .error(ErrorKind::InvalidValue, "Playlist name cannot be empty")
+            .exit();
     }
 
     // Initialize logger with custom format (no timestamp/prefix) and levels
@@ -55,15 +56,15 @@ async fn main() -> Result<()> {
         .format_level(false)
         .format_target(false)
         .init();
-    
+
     info!("🎲 Starting Spotify Reshuffle...");
-    
+
     // Initialize Spotify client
     let spotify = init_spotify_client().await?;
-    
+
     // Run the reshuffle process
     reshuffle_and_create_playlist(&spotify, &args).await?;
-    
+
     Ok(())
 }
 
@@ -71,10 +72,7 @@ async fn main() -> Result<()> {
 async fn init_spotify_client() -> Result<AuthCodeSpotify> {
     let creds = Credentials::from_env().unwrap();
     let oauth = OAuth {
-        scopes: scopes!(
-            "user-library-read",
-            "playlist-modify-private"
-        ),
+        scopes: scopes!("user-library-read", "playlist-modify-private"),
         redirect_uri: "http://localhost:8888/callback".to_owned(),
         ..Default::default()
     };
@@ -103,13 +101,13 @@ async fn find_or_create_playlist(spotify: &AuthCodeSpotify, playlist_name: &str)
         .search(
             playlist_name,
             SearchType::Playlist,
-            None, // market
-            None, // include_external
+            None,     // market
+            None,     // include_external
             Some(50), // limit
-            Some(0), // offset
+            Some(0),  // offset
         )
         .await?;
-    
+
     if let SearchResult::Playlists(playlists_page) = search_result {
         for playlist in playlists_page.items {
             if playlist.name == playlist_name {
@@ -126,7 +124,7 @@ async fn find_or_create_playlist(spotify: &AuthCodeSpotify, playlist_name: &str)
             }
         }
     }
-    
+
     // Create new playlist
     let user = spotify.current_user().await?;
     let new_playlist = spotify
@@ -138,9 +136,9 @@ async fn find_or_create_playlist(spotify: &AuthCodeSpotify, playlist_name: &str)
             Some("Automatically generated shuffled playlist"),
         )
         .await?;
-    
+
     info!("📝 Created new playlist: '{}'", new_playlist.name);
-    
+
     Ok(new_playlist)
 }
 
@@ -151,11 +149,11 @@ async fn clear_playlist(spotify: &AuthCodeSpotify, playlist_id: &PlaylistId<'_>)
         .playlist_items(playlist_id.clone(), None, None)
         .try_collect()
         .await?;
-    
+
     if items.is_empty() {
         return Ok(());
     }
-    
+
     // Collect all track IDs
     let mut track_ids = Vec::new();
     for item in items {
@@ -165,31 +163,26 @@ async fn clear_playlist(spotify: &AuthCodeSpotify, playlist_id: &PlaylistId<'_>)
             }
         }
     }
-    
+
     if track_ids.is_empty() {
         return Ok(());
     }
-    
+
     // Remove tracks in batches (Spotify API has limits)
     const REMOVE_BATCH_SIZE: usize = 100;
     for (batch_num, batch) in track_ids.chunks(REMOVE_BATCH_SIZE).enumerate() {
         info!("   Clearing batch {}: {} tracks", batch_num + 1, batch.len());
 
-        spotify.playlist_remove_all_occurrences_of_items(
-            playlist_id.clone(),
-            batch.iter().cloned(),
-            None
-        ).await?;
+        spotify
+            .playlist_remove_all_occurrences_of_items(playlist_id.clone(), batch.iter().cloned(), None)
+            .await?;
     }
-    
+
     Ok(())
 }
 
 /// Retrieves all tracks from the provided playlists
-async fn get_tracks_from_playlists(
-    spotify: &AuthCodeSpotify,
-    playlist_ids: &[&str],
-) -> Result<Vec<String>> {
+async fn get_tracks_from_playlists(spotify: &AuthCodeSpotify, playlist_ids: &[&str]) -> Result<Vec<String>> {
     let mut tracks = Vec::new();
     let mut invalid_count = 0;
 
@@ -289,7 +282,7 @@ async fn reshuffle_and_create_playlist(spotify: &AuthCodeSpotify, args: &Args) -
         .filter(|uri| is_valid_spotify_track_uri(uri))
         .cloned()
         .collect();
-        
+
     if valid_tracks.len() != unique_tracks.len() {
         let removed = unique_tracks.len() - valid_tracks.len();
         warn!("⚠️ {removed} invalid URIs removed during final validation");
@@ -311,27 +304,24 @@ async fn reshuffle_and_create_playlist(spotify: &AuthCodeSpotify, args: &Args) -
     // Adding in batches of 100
     info!("⬆️ Adding tracks to playlist...");
     const BATCH_SIZE: usize = 100;
-    
+
     for (batch_num, batch) in tracks_to_add.chunks(BATCH_SIZE).enumerate() {
         info!("   Adding batch {}: {} tracks", batch_num + 1, batch.len());
-        
-        let track_ids: Result<Vec<TrackId>, _> = batch
-            .iter()
-            .map(|uri| TrackId::from_uri(uri))
-            .collect();
-        
+
+        let track_ids: Result<Vec<TrackId>, _> = batch.iter().map(|uri| TrackId::from_uri(uri)).collect();
+
         let track_ids = track_ids?;
-        let playable_ids: Vec<PlayableId> = track_ids
-            .into_iter()
-            .map(PlayableId::Track)
-            .collect();
-            
+        let playable_ids: Vec<PlayableId> = track_ids.into_iter().map(PlayableId::Track).collect();
+
         spotify
             .playlist_add_items(playlist.id.clone(), playable_ids, None)
             .await?;
     }
 
-    info!("✅ Playlist updated successfully: {}", playlist.external_urls.get("spotify").unwrap_or(&"N/A".to_string()));
+    info!(
+        "✅ Playlist updated successfully: {}",
+        playlist.external_urls.get("spotify").unwrap_or(&"N/A".to_string())
+    );
     info!("🎉 {} tracks added!", tracks_to_add.len());
 
     Ok(())
