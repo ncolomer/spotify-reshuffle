@@ -1,140 +1,290 @@
-# Spotify Reshuffle (Rust)
+# 🎵 Spotify Reshuffle
 
-A Rust application that reshuffles your Spotify playlists and liked songs into a new shuffled playlist.
+A powerful command-line tool that combines and shuffles tracks from your Spotify playlists and liked songs into a new playlist.
 
-## Features
+[![CI](https://github.com/ncolomer/spotify-reshuffle/actions/workflows/ci.yml/badge.svg)](https://github.com/ncolomer/spotify-reshuffle/actions/workflows/ci.yml)
+[![Release](https://github.com/ncolomer/spotify-reshuffle/actions/workflows/release.yml/badge.svg)](https://github.com/ncolomer/spotify-reshuffle/actions/workflows/release.yml)
 
-- 🎵 Combine tracks from multiple playlists
-- ❤️ Include your Liked Songs
-- 🧹 Automatic deduplication
-- 🎲 Random shuffling
-- ⚠️ Filters out invalid/local tracks
-- 📝 Creates a new playlist with all shuffled tracks
+## ✨ Features
 
-## Prerequisites
+- 🎵 **Combine multiple playlists** into one shuffled playlist
+- ❤️ **Include your Liked Songs** in the mix
+- 🧹 **Automatic deduplication** removes duplicate tracks
+- 🎲 **True random shuffling** using cryptographically secure randomization
+- ⚠️ **Smart filtering** removes invalid, local, and unavailable tracks
+- 📝 **Flexible playlist management** - creates new or updates existing playlists
+- 🔧 **Configurable cache** for authentication tokens
+- 🚀 **Fast and memory-efficient** built with Rust
 
-- Rust 1.70+ installed
-- Spotify Developer Account
-- Spotify App credentials (Client ID and Client Secret)
+## 📦 Installation
 
-## Setup
+### Option 1: Download Pre-built Binaries (Recommended)
 
-1. **Clone/Download** this repository
+Download the latest release for your platform:
 
-2. **Create a Spotify App**:
-   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-   - Create a new app
-   - Add `http://127.0.0.1:8888/callback` as a redirect URI
-   - Note your Client ID and Client Secret
-
-3. **Set Environment Variables**:
-   ```bash
-   export SPOTIPY_CLIENT_ID="your_client_id_here"
-   export SPOTIPY_CLIENT_SECRET="your_client_secret_here"
-   ```
-
-4. **Configure Playlists** (optional):
-   - Edit `src/main.rs` and update the `SOURCE_PLAYLISTS` constant with your playlist IDs
-   - You can find playlist IDs in the Spotify URL: `https://open.spotify.com/playlist/PLAYLIST_ID`
-
-## Usage
-
-### Build and Run
+- **Linux (x86_64)**: [`spotify-reshuffle-linux-amd64`](https://github.com/ncolomer/spotify-reshuffle/releases/latest)
+- **Linux (ARM64/Raspberry Pi)**: [`spotify-reshuffle-linux-arm64`](https://github.com/ncolomer/spotify-reshuffle/releases/latest)
 
 ```bash
-# Build the project
-cargo build --release
+# Download and extract (Linux x86_64 example)
+curl -L -o spotify-reshuffle.tar.gz https://github.com/ncolomer/spotify-reshuffle/releases/latest/download/spotify-reshuffle-linux-amd64.tar.gz
+tar -xzf spotify-reshuffle.tar.gz
+chmod +x spotify-reshuffle
 
-# Run the application
-cargo run --release
+# Move to PATH (optional)
+sudo mv spotify-reshuffle /usr/local/bin/
 ```
 
-### What It Does
+### Option 2: Install with Cargo
 
-1. **Authentication**: Opens a browser for Spotify OAuth
-2. **Track Collection**: Retrieves tracks from configured playlists and liked songs
-3. **Validation**: Filters out local tracks (those starting with `spotify:local:`)
-4. **Deduplication**: Removes duplicate tracks
-5. **Shuffling**: Randomly shuffles all tracks
-6. **Playlist Creation**: Creates a new playlist called "🎲 Reshuffled Playlist"
-7. **Track Addition**: Adds all tracks in batches of 100
+```bash
+cargo install --git https://github.com/ncolomer/spotify-reshuffle
+```
+
+### Option 3: Build from Source
+
+```bash
+git clone https://github.com/ncolomer/spotify-reshuffle
+cd spotify-reshuffle
+cargo build --release
+```
+
+## 🚀 Quick Start
+
+### 1. Create a Spotify App
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Click **"Create an app"**
+3. Fill in the details and create
+4. Add `http://localhost:8888/callback` as a **Redirect URI**
+5. Save your **Client ID** and **Client Secret**
+
+### 2. Set Environment Variables
+
+```bash
+export RSPOTIFY_CLIENT_ID="your_client_id_here"
+export RSPOTIFY_CLIENT_SECRET="your_client_secret_here"
+```
+
+💡 **Tip**: Add these to your `~/.bashrc` or `~/.zshrc` for permanent setup.
+
+### 3. Run the Tool
+
+```bash
+# Basic usage - combine playlists into a new playlist
+spotify-reshuffle --target-playlist-name "My Shuffled Mix" --source-playlists "playlist_id_1,playlist_id_2"
+
+# Include your liked songs too
+spotify-reshuffle --target-playlist-name "Ultimate Mix" --source-playlists "playlist_id_1" --include-liked
+
+# Use a custom cache location
+spotify-reshuffle --target-playlist-name "My Mix" --include-liked --cache-path "~/.spotify-cache.json"
+```
+
+## 📋 Usage Examples
+
+### Find Playlist IDs
+
+You can find playlist IDs in the Spotify URL:
+```
+https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
+                                 ↑ This is the playlist ID
+```
+
+### Basic Examples
+
+```bash
+# Get help
+spotify-reshuffle --help
+
+# Combine two playlists
+spotify-reshuffle \
+  --target-playlist-name "My Party Mix" \
+  --source-playlists "37i9dQZF1DXcBWIGoYBM5M,1G4dQaJc8VhG4D5aYi7iWv"
+
+# Include your liked songs only
+spotify-reshuffle \
+  --target-playlist-name "My Liked Shuffled" \
+  --include-liked
+
+# Combine everything - playlists + liked songs
+spotify-reshuffle \
+  --target-playlist-name "Ultimate Mix" \
+  --source-playlists "37i9dQZF1DXcBWIGoYBM5M,1G4dQaJc8VhG4D5aYi7iWv" \
+  --include-liked
+```
+
+### Advanced Examples
+
+```bash
+# Use custom cache location
+spotify-reshuffle \
+  --target-playlist-name "My Mix" \
+  --include-liked \
+  --cache-path "/tmp/spotify-tokens.json"
+
+# Update an existing playlist (will clear and re-populate)
+spotify-reshuffle \
+  --target-playlist-name "Weekly Mix" \
+  --source-playlists "37i9dQZF1DXcBWIGoYBM5M"
+```
 
 ### Sample Output
 
 ```
-📂 Retrieving tracks from 3 playlists...
-⚠️  Invalid URI ignored: spotify:local:Artist::Local+Track:300
-❤️  Retrieving Liked Songs...
-🎵 Total tracks retrieved: 1311
-🧹 After deduplication: 1054 unique tracks
-🎲 Tracks shuffled: 1054 tracks ready
-📝 Playlist created: '🎲 Reshuffled Playlist'
-⬆️  Adding tracks to playlist...
+🎲 Starting Spotify Reshuffle...
+📂 Retrieving tracks from 2 playlists...
+   Processing playlist 1: 'Discover Weekly'
+   Processing playlist 2: 'Release Radar'
+❤️ Retrieving Liked Songs...
+🎵 Total tracks retrieved: 1,247
+🧹 After deduplication: 891 unique tracks
+📝 Found existing playlist: 'My Ultimate Mix'
+🧹 Clearing existing tracks...
+   Clearing batch 1: 100 tracks
+🎲 Tracks shuffled: 891 tracks ready
+⬆️ Adding tracks to playlist...
    Adding batch 1: 100 tracks
    Adding batch 2: 100 tracks
+   Adding batch 3: 100 tracks
    ...
-✅ Playlist created successfully: https://open.spotify.com/playlist/...
-🎉 1054 tracks added!
+✅ Playlist updated successfully: https://open.spotify.com/playlist/xyz
+🎉 891 tracks added!
 ```
 
-## Configuration
+## ⚙️ Configuration
 
-You can modify these constants in `src/main.rs`:
+### Command Line Options
 
-```rust
-// Playlist IDs to include (without spotify:playlist: prefix)
-const SOURCE_PLAYLISTS: &[&str] = &[
-    "3FRqF28glFVef3PqU4Fhoi",
-    "7HPMJjw9ncQGgRUqt48pOb", 
-    "4Qj9TfkDUlanrZNK6JmaJV",
-];
+```
+spotify-reshuffle [OPTIONS] --target-playlist-name <TARGET_PLAYLIST_NAME>
 
-// Whether to include Liked Songs
-const INCLUDE_LIKED: bool = true;
-
-// Name of the created playlist
-const PLAYLIST_NAME: &str = "🎲 Reshuffled Playlist";
+Options:
+  -s, --source-playlists <SOURCE_PLAYLISTS>
+          Comma-separated playlist IDs to use as sources
+  
+  -t, --target-playlist-name <TARGET_PLAYLIST_NAME>
+          Name of the target playlist to create/update
+  
+      --include-liked
+          Include liked songs in the shuffle
+  
+      --cache-path <CACHE_PATH>
+          Path to the cache file for storing authentication tokens
+  
+  -h, --help
+          Print help
+  
+  -V, --version
+          Print version
 ```
 
-## Dependencies
+### Environment Variables
 
-- [rspotify](https://github.com/ramsayleung/rspotify) - Spotify Web API SDK for Rust
-- [tokio](https://tokio.rs/) - Async runtime
-- [rand](https://docs.rs/rand/) - Random number generation for shuffling
-- [anyhow](https://docs.rs/anyhow/) - Error handling
-- [log](https://docs.rs/log/) - Logging
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `RSPOTIFY_CLIENT_ID` | Your Spotify App Client ID | ✅ Yes |
+| `RSPOTIFY_CLIENT_SECRET` | Your Spotify App Client Secret | ✅ Yes |
 
-## Differences from Python Version
+## 🔧 How It Works
 
-- **Better Error Handling**: Uses Rust's `Result` type for robust error handling
-- **Memory Efficiency**: More efficient memory usage with Rust's ownership system
-- **Type Safety**: Compile-time guarantees about data types and memory safety
-- **Performance**: Generally faster execution due to Rust's zero-cost abstractions
-- **Async/Await**: Fully async implementation for better I/O performance
+1. **🔐 Authentication**: Initiates Spotify OAuth flow (opens browser)
+2. **📥 Collection**: Retrieves tracks from specified playlists and/or liked songs
+3. **✨ Validation**: Filters out invalid, local, or unavailable tracks
+4. **🧹 Deduplication**: Removes duplicate tracks across all sources
+5. **🎲 Shuffling**: Randomly shuffles the final track list
+6. **📝 Playlist**: Creates new playlist or clears existing one
+7. **⬆️ Upload**: Adds all tracks in batches of 100 (Spotify API limit)
 
-## Troubleshooting
+## 🛠️ Development
 
-### Environment Variables Not Set
-```
-Error: SPOTIPY_CLIENT_ID environment variable not set
-```
-Make sure you've exported both `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET`.
+### Prerequisites
 
-### Authentication Issues
-If you have issues with authentication, try:
-1. Clearing any cached tokens (delete `.cache` files)
-2. Making sure the redirect URI matches exactly: `http://127.0.0.1:8888/callback`
-3. Checking that your Spotify app has the correct redirect URI configured
+- Rust 1.70+ 
+- Git
 
-### Build Issues
-If you encounter build issues:
+### Building
+
 ```bash
-# Clean build artifacts and rebuild
-cargo clean
+git clone https://github.com/ncolomer/spotify-reshuffle
+cd spotify-reshuffle
 cargo build --release
 ```
 
-## License
+### Running Tests
 
-MIT License
+```bash
+cargo test
+```
+
+### Cross-Compilation
+
+```bash
+# For Raspberry Pi (ARM64)
+cross build --release --target aarch64-unknown-linux-gnu
+
+# For x86_64 Linux
+cargo build --release --target x86_64-unknown-linux-gnu
+```
+
+## 🚨 Troubleshooting
+
+### Environment Variables Not Set
+```
+Error: Environment variable not found: RSPOTIFY_CLIENT_ID
+```
+**Solution**: Make sure you've set both `RSPOTIFY_CLIENT_ID` and `RSPOTIFY_CLIENT_SECRET`.
+
+### Authentication Failed
+```
+Error: OAuth error: invalid_client
+```
+**Solutions**:
+1. Double-check your Client ID and Secret
+2. Verify redirect URI is exactly: `http://localhost:8888/callback`
+3. Ensure your Spotify app settings match
+
+### Playlist Not Found
+```
+Error: Playlist not found or access denied
+```
+**Solutions**:
+1. Verify the playlist ID is correct
+2. Make sure the playlist is public or owned by you
+3. Check that you have the right permissions
+
+### Network/API Issues
+```
+Error: Request failed with status 429
+```
+**Solution**: Spotify API rate limiting. Wait a few minutes and try again.
+
+### Permission Denied
+```
+Error: Permission denied while creating cache file
+```
+**Solution**: Use `--cache-path` to specify a writable location:
+```bash
+spotify-reshuffle --cache-path "~/spotify-cache.json" [other options]
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [rSpotify](https://github.com/ramsayleung/rspotify) - Excellent Spotify Web API client
+- [Tokio](https://tokio.rs/) - Async runtime for Rust
+- [Clap](https://docs.rs/clap/) - Command-line argument parser
 
