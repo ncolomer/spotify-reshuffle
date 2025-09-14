@@ -9,6 +9,7 @@ use rspotify::{
     scopes, AuthCodeSpotify, Config, Credentials, OAuth,
 };
 use std::collections::HashSet;
+use std::path::PathBuf;
 
 /// Spotify Reshuffle CLI tool
 #[derive(Parser, Debug)]
@@ -25,6 +26,10 @@ struct Args {
     /// Include liked songs in the shuffle
     #[arg(long)]
     include_liked: bool,
+
+    /// Path to the cache file for storing authentication tokens
+    #[arg(long, help = "Path to the cache file for storing authentication tokens")]
+    cache_path: Option<String>,
 }
 
 #[tokio::main]
@@ -60,7 +65,7 @@ async fn main() -> Result<()> {
     info!("🎲 Starting Spotify Reshuffle...");
 
     // Initialize Spotify client
-    let spotify = init_spotify_client().await?;
+    let spotify = init_spotify_client(args.cache_path.as_deref()).await?;
 
     // Run the reshuffle process
     reshuffle_and_create_playlist(&spotify, &args).await?;
@@ -69,17 +74,26 @@ async fn main() -> Result<()> {
 }
 
 /// Initialize the Spotify client with OAuth authentication
-async fn init_spotify_client() -> Result<AuthCodeSpotify> {
+async fn init_spotify_client(cache_path: Option<&str>) -> Result<AuthCodeSpotify> {
     let creds = Credentials::from_env().unwrap();
     let oauth = OAuth {
         scopes: scopes!("user-library-read", "playlist-modify-private"),
         redirect_uri: "http://localhost:8888/callback".to_owned(),
         ..Default::default()
     };
-    let config = Config {
-        token_cached: true,
-        ..Default::default()
+
+    let config = match cache_path {
+        Some(path) => Config {
+            token_cached: true,
+            cache_path: PathBuf::from(path),
+            ..Default::default()
+        },
+        None => Config {
+            token_cached: true,
+            ..Default::default()
+        },
     };
+
     let spotify = AuthCodeSpotify::with_config(creds, oauth, config);
     let url = spotify.get_authorize_url(true)?;
     spotify.prompt_for_token(&url).await?;
