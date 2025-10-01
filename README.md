@@ -22,15 +22,21 @@ A powerful command-line tool that combines and shuffles tracks from your Spotify
 
 ### Option 1: Download Pre-built Binaries (Recommended)
 
-Download the latest release for your platform:
+Download the [latest release](https://github.com/ncolomer/spotify-reshuffle/releases) for your platform:
 
-- **Linux (x86_64)**: [`spotify-reshuffle-linux-amd64`](https://github.com/ncolomer/spotify-reshuffle/releases/latest)
-- **Linux (ARM64/Raspberry Pi)**: [`spotify-reshuffle-linux-arm64`](https://github.com/ncolomer/spotify-reshuffle/releases/latest)
+[![Linux Intel](https://img.shields.io/badge/Download-Linux%20Intel-blue?style=for-the-badge&logo=linux)](https://github.com/ncolomer/spotify-reshuffle/releases/latest/download/spotify-reshuffle-linux-intel)
+
+[![Linux ARM64](https://img.shields.io/badge/Download-Linux%20ARM64-green?style=for-the-badge&logo=linux)](https://github.com/ncolomer/spotify-reshuffle/releases/latest/download/spotify-reshuffle-linux-arm64)
+
+[![macOS Intel](https://img.shields.io/badge/Download-macOS%20Intel-silver?style=for-the-badge&logo=apple)](https://github.com/ncolomer/spotify-reshuffle/releases/latest/download/spotify-reshuffle-macos-intel)
+
+[![macOS ARM64](https://img.shields.io/badge/Download-macOS%20ARM64-black?style=for-the-badge&logo=apple)](https://github.com/ncolomer/spotify-reshuffle/releases/latest/download/spotify-reshuffle-macos-arm64)
+
+Or from terminal:
 
 ```bash
-# Download and extract (Linux x86_64 example)
-curl -L -o spotify-reshuffle.tar.gz https://github.com/ncolomer/spotify-reshuffle/releases/latest/download/spotify-reshuffle-linux-amd64.tar.gz
-tar -xzf spotify-reshuffle.tar.gz
+# Download manually (Linux ARM64 example)
+curl -L -o spotify-reshuffle https://github.com/ncolomer/spotify-reshuffle/releases/latest/download/spotify-reshuffle-linux-arm64
 chmod +x spotify-reshuffle
 
 # Move to PATH (optional)
@@ -248,11 +254,21 @@ cargo test
 ### Cross-Compilation
 
 ```bash
-# For Raspberry Pi (ARM64)
+# For x86_64 Linux
+rustup target add x86_64-unknown-linux-gnu
+cargo build --release --target x86_64-unknown-linux-gnu
+
+# For ARM64 Linux
+rustup target add aarch64-unknown-linux-gnu
 cross build --release --target aarch64-unknown-linux-gnu
 
-# For x86_64 Linux
-cargo build --release --target x86_64-unknown-linux-gnu
+# For macOS (Intel) - requires macOS SDK
+rustup target add x86_64-apple-darwin
+cargo build --release --target x86_64-apple-darwin
+
+# For macOS (ARM64/M1/M2/M3) - requires macOS SDK
+rustup target add aarch64-apple-darwin
+cargo build --release --target aarch64-apple-darwin
 ```
 
 ## 🚨 Troubleshooting

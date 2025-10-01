@@ -1,0 +1,67 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to set in Cargo.toml'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: spotify-reshuffle-linux-intel
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: spotify-reshuffle-linux-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            name: spotify-reshuffle-macos-intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: spotify-reshuffle-macos-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
+
+      - name: Install cargo-edit
+        if: inputs.version != ''
+        run: cargo install cargo-edit
+
+      - name: Install cross (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo install cross
+
+      - name: Update Cargo.toml version
+        if: inputs.version != ''
+        run: cargo set-version "${{ inputs.version }}"
+
+      - name: Build binary (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: cross build ${{ inputs.version != '' && '--release' || '' }} --target ${{ matrix.target }}
+
+      - name: Build binary (macOS)
+        if: matrix.os == 'macos-latest'
+        run: cargo build ${{ inputs.version != '' && '--release' || '' }} --target ${{ matrix.target }}
+
+      - name: Rename binary
+        if: inputs.version != ''
+        run: mv target/${{ matrix.target }}/release/{spotify-reshuffle,${{ matrix.name }}}
+
+      - name: Upload artifact
+        if: inputs.version != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.name }}

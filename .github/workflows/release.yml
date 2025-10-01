@@ -10,39 +10,10 @@ env:
 
 jobs:
   build:
-    name: Build ${{ matrix.name }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            name: spotify-reshuffle-linux-amd64
-          - target: aarch64-unknown-linux-gnu
-            name: spotify-reshuffle-linux-arm64
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          target: ${{ matrix.target }}
-
-      - name: Install cargo tools
-        run: cargo install cross cargo-edit
-
-      - name: Update Cargo.toml version
-        run: cargo set-version "${GITHUB_REF#refs/tags/v}"
-
-      - name: Build binary
-        run: cross build --release --target ${{ matrix.target }}
-
-      - name: Rename binary
-        run: mv target/${{ matrix.target }}/release/{spotify-reshuffle,${{ matrix.name }}}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.name }}
+    name: Build Binaries
+    uses: ./.github/workflows/build.yml
+    with:
+      version: "${GITHUB_REF#refs/tags/v}"
 
   release:
     name: Create Release
