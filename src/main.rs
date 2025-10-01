@@ -31,6 +31,22 @@ struct Args {
     /// Path to the cache file for storing authentication tokens
     #[arg(long, help = "Path to the cache file for storing authentication tokens")]
     cache_path: Option<String>,
+
+    /// Spotify app client ID (can also be set via SPOTIFY_CLIENT_ID env var)
+    #[arg(
+        long,
+        env = "SPOTIFY_CLIENT_ID",
+        help = "Your Spotify app's client ID. Get it from https://developer.spotify.com/dashboard/applications"
+    )]
+    spotify_client_id: String,
+
+    /// Spotify app client secret (can also be set via SPOTIFY_CLIENT_SECRET env var)
+    #[arg(
+        long,
+        env = "SPOTIFY_CLIENT_SECRET",
+        help = "Your Spotify app's client secret. Get it from https://developer.spotify.com/dashboard/applications"
+    )]
+    spotify_client_secret: String,
 }
 
 #[tokio::main]
@@ -66,7 +82,12 @@ async fn main() -> Result<()> {
     info!("🎲 Starting Spotify Reshuffle...");
 
     // Initialize Spotify client
-    let spotify = init_spotify_client(args.cache_path.as_deref()).await?;
+    let spotify = init_spotify_client(
+        &args.spotify_client_id,
+        &args.spotify_client_secret,
+        args.cache_path.as_deref(),
+    )
+    .await?;
 
     // Run the reshuffle process
     reshuffle_and_create_playlist(&spotify, &args).await?;
@@ -75,8 +96,15 @@ async fn main() -> Result<()> {
 }
 
 /// Initialize the Spotify client with OAuth authentication
-async fn init_spotify_client(cache_path: Option<&str>) -> Result<AuthCodeSpotify> {
-    let creds = Credentials::from_env().unwrap();
+async fn init_spotify_client(
+    client_id: &str,
+    client_secret: &str,
+    cache_path: Option<&str>,
+) -> Result<AuthCodeSpotify> {
+    let creds = Credentials {
+        id: client_id.to_string(),
+        secret: Some(client_secret.to_string()),
+    };
     let oauth = OAuth {
         scopes: scopes!("user-library-read", "playlist-modify-private"),
         redirect_uri: "http://localhost:8888/callback".to_owned(),
