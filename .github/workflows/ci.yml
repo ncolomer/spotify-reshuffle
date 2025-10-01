@@ -46,3 +46,8 @@ jobs:
         with:
           components: clippy
       - run: cargo clippy -- -D warnings
+
+  build:
+    name: Test build
+    uses: ./.github/workflows/build.yml
+    needs: [check, test, fmt, clippy]
