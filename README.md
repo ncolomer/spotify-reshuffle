@@ -14,7 +14,9 @@ A powerful command-line tool that combines and shuffles tracks from your Spotify
 - ⚠️ **Smart filtering** removes invalid, local, and unavailable tracks
 - 📝 **Flexible playlist management** - creates new or updates existing playlists
 - 🔧 **Configurable cache** for authentication tokens
+- 🔑 **Flexible authentication** - use environment variables or command line arguments
 - 🚀 **Fast and memory-efficient** built with Rust
+- ✨ **Graceful error handling** with helpful error messages
 
 ## 📦 Installation
 
@@ -59,23 +61,41 @@ cargo build --release
 4. Add `http://localhost:8888/callback` as a **Redirect URI**
 5. Save your **Client ID** and **Client Secret**
 
-### 2. Set Environment Variables
+### 2. Set Up Authentication
 
+You can provide your Spotify credentials in two ways:
+
+#### Option A: Environment Variables (Recommended)
 ```bash
-export RSPOTIFY_CLIENT_ID="your_client_id_here"
-export RSPOTIFY_CLIENT_SECRET="your_client_secret_here"
+export SPOTIFY_CLIENT_ID="your_client_id_here"
+export SPOTIFY_CLIENT_SECRET="your_client_secret_here"
 ```
 
 💡 **Tip**: Add these to your `~/.bashrc` or `~/.zshrc` for permanent setup.
 
+#### Option B: Command Line Arguments
+```bash
+spotify-reshuffle \
+  --spotify-client-id "your_client_id_here" \
+  --spotify-client-secret "your_client_secret_here" \
+  [other options...]
+```
+
 ### 3. Run the Tool
 
 ```bash
-# Basic usage - combine playlists into a new playlist
+# Basic usage - combine playlists into a new playlist (using environment variables)
 spotify-reshuffle --target-playlist-name "My Shuffled Mix" --source-playlists "playlist_id_1,playlist_id_2"
 
 # Include your liked songs too
 spotify-reshuffle --target-playlist-name "Ultimate Mix" --source-playlists "playlist_id_1" --include-liked
+
+# Use command line arguments for credentials
+spotify-reshuffle \
+  --spotify-client-id "your_client_id" \
+  --spotify-client-secret "your_client_secret" \
+  --target-playlist-name "My Mix" \
+  --include-liked
 
 # Use a custom cache location
 spotify-reshuffle --target-playlist-name "My Mix" --include-liked --cache-path "~/.spotify-cache.json"
@@ -157,7 +177,7 @@ spotify-reshuffle \
 ### Command Line Options
 
 ```
-spotify-reshuffle [OPTIONS] --target-playlist-name <TARGET_PLAYLIST_NAME>
+spotify-reshuffle [OPTIONS] --target-playlist-name <TARGET_PLAYLIST_NAME> --spotify-client-id <SPOTIFY_CLIENT_ID> --spotify-client-secret <SPOTIFY_CLIENT_SECRET>
 
 Options:
   -s, --source-playlists <SOURCE_PLAYLISTS>
@@ -172,6 +192,12 @@ Options:
       --cache-path <CACHE_PATH>
           Path to the cache file for storing authentication tokens
   
+      --spotify-client-id <SPOTIFY_CLIENT_ID>
+          Your Spotify app's client ID. Get it from https://developer.spotify.com/dashboard/applications [env: SPOTIFY_CLIENT_ID]
+
+      --spotify-client-secret <SPOTIFY_CLIENT_SECRET>
+          Your Spotify app's client secret. Get it from https://developer.spotify.com/dashboard/applications [env: SPOTIFY_CLIENT_SECRET]
+
   -h, --help
           Print help
   
@@ -183,8 +209,10 @@ Options:
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `RSPOTIFY_CLIENT_ID` | Your Spotify App Client ID | ✅ Yes |
-| `RSPOTIFY_CLIENT_SECRET` | Your Spotify App Client Secret | ✅ Yes |
+| `SPOTIFY_CLIENT_ID` | Your Spotify App Client ID | ✅ Yes |
+| `SPOTIFY_CLIENT_SECRET` | Your Spotify App Client Secret | ✅ Yes |
+
+💡 **Note**: You can also provide these values as command line arguments (`--spotify-client-id` and `--spotify-client-secret`). Command line arguments take precedence over environment variables.
 
 ## 🔧 How It Works
 
@@ -229,11 +257,23 @@ cargo build --release --target x86_64-unknown-linux-gnu
 
 ## 🚨 Troubleshooting
 
-### Environment Variables Not Set
+### Missing Spotify Credentials
 ```
-Error: Environment variable not found: RSPOTIFY_CLIENT_ID
+error: the following required arguments were not provided:
+  --spotify-client-id <SPOTIFY_CLIENT_ID>
+  --spotify-client-secret <SPOTIFY_CLIENT_SECRET>
 ```
-**Solution**: Make sure you've set both `RSPOTIFY_CLIENT_ID` and `RSPOTIFY_CLIENT_SECRET`.
+**Solutions**:
+1. **Set environment variables** (recommended):
+   ```bash
+   export SPOTIFY_CLIENT_ID="your_client_id_here"
+   export SPOTIFY_CLIENT_SECRET="your_client_secret_here"
+   ```
+
+2. **Use command line arguments**:
+   ```bash
+   spotify-reshuffle --spotify-client-id "your_client_id" --spotify-client-secret "your_client_secret" [other options...]
+   ```
 
 ### Authentication Failed
 ```
