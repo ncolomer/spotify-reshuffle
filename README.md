@@ -336,7 +336,7 @@ Contributions are welcome! Please:
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+Released into the public domain under [The Unlicense](LICENSE) - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
