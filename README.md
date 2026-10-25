@@ -64,7 +64,7 @@ cargo build --release
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Click **"Create an app"**
 3. Fill in the details and create
-4. Add `http://localhost:8888/callback` as a **Redirect URI**
+4. Add `http://127.0.0.1:8888/callback` as a **Redirect URI**
 5. Save your **Client ID** and **Client Secret**
 
 ### 2. Set Up Authentication
@@ -297,7 +297,7 @@ Error: OAuth error: invalid_client
 ```
 **Solutions**:
 1. Double-check your Client ID and Secret
-2. Verify redirect URI is exactly: `http://localhost:8888/callback`
+2. Verify redirect URI is exactly: `http://127.0.0.1:8888/callback`
 3. Ensure your Spotify app settings match
 
 ### Playlist Not Found
