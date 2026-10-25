@@ -107,7 +107,7 @@ async fn init_spotify_client(
     };
     let oauth = OAuth {
         scopes: scopes!("user-library-read", "playlist-modify-private"),
-        redirect_uri: "http://localhost:8888/callback".to_owned(),
+        redirect_uri: "http://127.0.0.1:8888/callback".to_owned(),
         ..Default::default()
     };
 
